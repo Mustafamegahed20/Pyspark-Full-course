@@ -593,7 +593,6 @@ df.display()
 **Result:**
 - "Regular" → "R"
 - "Low Fat" → "LF"
-# Complete PySpark Master Class Notes (Continued)
 
 ## 6. Type Casting
 
@@ -1393,7 +1392,6 @@ END
 
 ---
 
-# Complete PySpark Master Class Notes (Continued)
 
 ## 22. Joins in PySpark
 
