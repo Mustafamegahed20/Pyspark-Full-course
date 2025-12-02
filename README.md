@@ -2737,5 +2737,344 @@ df.createTempView("view_name")
 spark.sql("SELECT * FROM view_name")
 ```
 
+# PySpark Course - Test Exam
+
+## Instructions
+- 5 Questions covering key concepts
+- Mix of multiple choice and coding problems
+- Test your understanding of the entire course
+
 ---
+
+
+## Question 1: Lazy Evaluation (Multiple Choice)
+
+**Which of the following will actually execute transformations?**
+
+```python
+df1 = df.filter(col("sales") > 100)
+df2 = df1.select("item_name", "sales")
+df3 = df2.groupBy("item_name").agg(sum("sales"))
+```
+
+A) After line 1  
+B) After line 2  
+C) After line 3  
+D) None of them   
+
+---
+
+## Question 2: Joins (Coding Problem)
+
+**Given two DataFrames, write code to find employees who DON'T have a department assigned.**
+
+```python
+# DataFrame 1: Employees
+employees_data = [
+    (1, "Alice", "D01"),
+    (2, "Bob", "D02"),
+    (3, "Charlie", "D99"),  # D99 doesn't exist in departments
+    (4, "David", None)       # No department assigned
+]
+df_emp = spark.createDataFrame(employees_data, ["emp_id", "emp_name", "dept_id"])
+
+# DataFrame 2: Departments
+dept_data = [
+    ("D01", "HR"),
+    ("D02", "IT")
+]
+df_dept = spark.createDataFrame(dept_data, ["dept_id", "dept_name"])
+```
+
+**Write the join query to find employees without valid departments (Charlie and David):**
+
+```python
+# Your answer here:
+result = df_emp.join(
+    df_dept,
+    ___________________,  # Fill in the blank
+    ___________________   # Fill in the blank
+)
+```
+
+---
+
+## Question 3: Window Functions (Coding Problem)
+
+**Complete the code to add a cumulative sum of sales ordered by date:**
+
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import sum
+
+# Sample data
+data = [
+    ("2025-01-01", 100),
+    ("2025-01-02", 150),
+    ("2025-01-03", 200)
+]
+df = spark.createDataFrame(data, ["date", "sales"])
+
+# Complete this code:
+window_spec = Window.orderBy("date").___________________
+
+df_result = df.withColumn(
+    "cumulative_sales",
+    sum("sales").over(window_spec)
+)
+```
+
+**Fill in the blank with the correct frame specification.**
+
+---
+
+## Question 4: Data Writing Modes (Scenario-Based)
+
+**Scenario:** You have a production table with critical customer data. You need to add today's new customers without losing existing data. Which mode should you use?
+
+```python
+df_new_customers.write \
+    .format("delta") \
+    .mode("_____") \
+    .saveAsTable("prod.customers.customer_master")
+```
+
+A) `overwrite` - Replace all existing data  
+B) `append` - Add new data to existing  
+C) `error` - Throw error if table exists  
+D) `ignore` - Skip if table exists  
+
+**Which mode and why?**
+
+---
+
+## Question 5: Comprehensive Coding Challenge
+
+**Given the sales data, perform the following operations:**
+
+```python
+# Sample sales data
+data = [
+    ("FDA15", 9.30, "Low Fat", "Dairy", 249.81),
+    ("DRC01", 5.92, "Regular", "Soft Drinks", 48.27),
+    ("FDN15", 17.50, "Low Fat", "Meat", 141.62),
+    ("FDX07", 19.20, "Regular", "Dairy", 182.10),
+    ("NCD19", 8.93, "Low Fat", "Dairy", 53.88)
+]
+
+schema = ["item_id", "item_weight", "fat_content", "item_type", "item_MRP"]
+df = spark.createDataFrame(data, schema)
+```
+
+**Complete all steps:**
+
+```python
+# Step 1: Replace "Low Fat" with "LF" and "Regular" with "R"
+df_clean = df.withColumn(
+    "fat_content",
+    ________________________________  # Fill in
+)
+
+# Step 2: Add a price category column
+# "Low" if MRP < 100, "Medium" if < 200, else "High"
+df_clean = df_clean.withColumn(
+    "price_category",
+    ________________________________  # Fill in
+)
+
+# Step 3: Find total MRP by item_type and price_category
+df_agg = df_clean.groupBy(
+    ________________________________  # Fill in
+).agg(
+    ________________________________  # Fill in
+)
+
+# Step 4: Add row number ordered by total MRP descending
+window_spec = Window.orderBy(________________________________)  # Fill in
+
+df_final = df_agg.withColumn(
+    "rank",
+    ________________________________  # Fill in
+)
+
+df_final.display()
+```
+
+---
+
+# SOLUTIONS
+
+## Solution 1: Lazy Evaluation
+**Answer: D**
+
+Explanation: All three lines are transformations (filter, select, groupBy). No action is called, so nothing executes. Need `.display()`, `.show()`, `.count()`, or `.collect()` to trigger execution.
+
+```python
+# This triggers execution:
+df3.display()  # Action!
+```
+
+---
+
+## Solution 2: Joins
+**Answer:**
+
+```python
+# Method 1: Anti Join (finds employees without matching departments)
+result = df_emp.join(
+    df_dept,
+    df_emp["dept_id"] == df_dept["dept_id"],
+    "anti"
+)
+
+# Method 2: Left Join + Filter for nulls
+result = df_emp.join(
+    df_dept,
+    df_emp["dept_id"] == df_dept["dept_id"],
+    "left"
+).filter(col("dept_name").isNull())
+
+# Method 3: Also include employees with NULL dept_id
+result = df_emp.join(
+    df_dept,
+    df_emp["dept_id"] == df_dept["dept_id"],
+    "left"
+).filter(
+    (col("dept_name").isNull()) | (df_emp["dept_id"].isNull())
+)
+
+result.display()
+```
+
+**Expected Output:**
+```
+| emp_id | emp_name | dept_id |
+|--------|----------|---------|
+| 3      | Charlie  | D99     |
+| 4      | David    | null    |
+```
+
+---
+
+## Solution 3: Window Functions
+**Answer:**
+
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import sum
+
+# Complete window specification
+window_spec = Window.orderBy("date").rowsBetween(
+    Window.unboundedPreceding, 
+    Window.currentRow
+)
+
+df_result = df.withColumn(
+    "cumulative_sales",
+    sum("sales").over(window_spec)
+)
+
+df_result.display()
+```
+
+**Expected Output:**
+```
+| date       | sales | cumulative_sales |
+|------------|-------|------------------|
+| 2025-01-01 | 100   | 100              |
+| 2025-01-02 | 150   | 250              |
+| 2025-01-03 | 200   | 450              |
+```
+
+---
+
+## Solution 4: Data Writing Modes
+**Answer: B - append**
+
+**Explanation:**
+- `append` adds new data without touching existing records
+- `overwrite` would DELETE all existing customers ❌
+- `error` would fail if table exists ❌
+- `ignore` would skip the write if table exists ❌
+
+```python
+# Correct answer:
+df_new_customers.write \
+    .format("delta") \
+    .mode("append") \
+    .saveAsTable("prod.customers.customer_master")
+```
+
+---
+
+## Solution 5: Comprehensive Coding Challenge
+**Complete Solution:**
+
+```python
+from pyspark.sql.functions import regexp_replace, when, col, sum, desc
+from pyspark.sql.window import Window
+
+# Step 1: Replace fat content values
+df_clean = df.withColumn(
+    "fat_content",
+    regexp_replace(col("fat_content"), "Low Fat", "LF")
+).withColumn(
+    "fat_content",
+    regexp_replace(col("fat_content"), "Regular", "R")
+)
+
+# Alternative Step 1 (using when-otherwise):
+df_clean = df.withColumn(
+    "fat_content",
+    when(col("fat_content") == "Low Fat", "LF")
+    .when(col("fat_content") == "Regular", "R")
+    .otherwise(col("fat_content"))
+)
+
+# Step 2: Add price category
+df_clean = df_clean.withColumn(
+    "price_category",
+    when(col("item_MRP") < 100, "Low")
+    .when(col("item_MRP") < 200, "Medium")
+    .otherwise("High")
+)
+
+# Step 3: Aggregate by item_type and price_category
+df_agg = df_clean.groupBy(
+    "item_type", "price_category"
+).agg(
+    sum("item_MRP").alias("total_MRP")
+)
+
+# Step 4: Add row number/rank
+window_spec = Window.orderBy(col("total_MRP").desc())
+
+df_final = df_agg.withColumn(
+    "rank",
+    row_number().over(window_spec)
+)
+
+df_final.display()
+```
+
+**Expected Output:**
+```
+| item_type   | price_category | total_MRP | rank |
+|-------------|----------------|-----------|------|
+| Dairy       | Medium         | 485.79    | 1    |
+| Meat        | Medium         | 141.62    | 2    |
+| Soft Drinks | Low            | 48.27     | 3    |
+```
+
+---
+
+## Scoring Guide
+
+- **Question 1:** 1 point (Lazy evaluation concept)
+- **Question 2:** 2 points (Joins - critical concept)
+- **Question 3:** 2 points (Window functions)
+- **Question 4:** 2 point (Writing modes)
+- **Question 5:** 3 points (Comprehensive - 0.5 per step)
+
+**Total: 10 points**
 
